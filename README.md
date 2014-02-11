@@ -25,7 +25,12 @@ I.e., an invocation could look like:
 ```
 
 You may need to ```chmod +x alsd.py``` first or otherwise prefix it with 
-```python``` if it is not executable..
+```python``` if it is not executable.
+
+To see a list of options, run alsd.py with the -h flag, i.e.,
+```
+alsd.py -h
+```
 
 Technical details
 =================
