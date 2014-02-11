@@ -1,4 +1,4 @@
-alsd - the Ableton Live Set dumping utility
+alsd - An Ableton Live Set dumping utility
 ====
 
 alsd is a utility for extracting and dumping data from Ableton Live set 
@@ -35,3 +35,7 @@ This code is distributed under the Apache open source license.
 Author:
 ======
 Andrew Bulhak   http://dev.null.org/acb/  http://github.com/andrewcb/
+
+Ableton and Live are trademarks of Ableton AG. This code is not in any way
+associated with or endorsed by them, and makes no claim of any official 
+connection with Ableton.
