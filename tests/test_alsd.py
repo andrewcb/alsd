@@ -21,6 +21,9 @@ class TestLiveInfo(unittest.TestCase):
 		self.assertEqual(trk.devices[0].presetName, "Massive")
 		self.assertEqual(trk.devices[1].presetName, "Driver")
 
+	def test_010_clip_count(self):
+		trk = self.testdev1.tracks[0]
+		self.assertEqual(len(trk.midiclips), 2)
 
 
 

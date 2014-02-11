@@ -58,6 +58,9 @@ class LiveSetTrackData(object):
         self.trackType = elem.tag
         self.name = bind(elem.find('Name/EffectiveName'), lambda e:e.get('Value'))
         self.devices = [LiveSetDeviceData(c) for c in elem.find("DeviceChain/DeviceChain/Devices")]
+        self.clipslots = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:x.findall("ClipSlot"))
+        # TODO: encapsulate these in a class
+        self.midiclips = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:x.findall(".//MidiClip"))
 
 
 class LiveSetData(object):
