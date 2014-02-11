@@ -23,6 +23,20 @@ def hideUnprintable(str, maskchar='.'):
 
 #  ---- classes
 
+class ALSNode(object):
+    """
+    The parent class of all .als nodes
+    """
+    def __init__(self, elem):
+        self.elem = elem
+
+
+class LiveSetMidiClipData(object):
+    """
+    An object encapsulating a MidiClip node.
+    """
+    pass
+
 class LiveSetAuPluginPresetData(object):
     """
     An object encapsulating the data stored in a preset buffer
@@ -32,12 +46,12 @@ class LiveSetAuPluginPresetData(object):
         self.plist = plistlib.readPlistFromString(self.text)
         self.name = self.plist.get('name')
 
-class LiveSetDeviceData(object):
+class LiveSetDeviceData(ALSNode):
     """
     An object encapsulating the data for a device
     """
     def __init__(self, elem):
-        self.elem = elem
+        super(LiveSetDeviceData, self).__init__(elem)
         self.deviceType = elem.tag
         self.auPresetBuffer = bind(elem.find("PluginDesc/AuPluginInfo/Preset/AuPreset/Buffer"), lambda e:LiveSetAuPluginPresetData(e.text))
         self.auPresetName = bind(self.auPresetBuffer, lambda b:b.name)
@@ -49,12 +63,12 @@ class LiveSetDeviceData(object):
         self.name = "%s: %s"%(self.deviceType, self.presetName)
 
 
-class LiveSetTrackData(object):
+class LiveSetTrackData(ALSNode):
     """
     An object encapsulating the data for a Track
     """
     def __init__(self, elem):
-        self.elem = elem
+        super(LiveSetTrackData, self).__init__(elem)
         self.trackType = elem.tag
         self.name = bind(elem.find('Name/EffectiveName'), lambda e:e.get('Value'))
         self.devices = [LiveSetDeviceData(c) for c in elem.find("DeviceChain/DeviceChain/Devices")]
