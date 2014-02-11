@@ -15,7 +15,17 @@ Usage:
 ======
 
 To use, run alsd.py with the path of the Ableton Live set file; this is 
-a file whose name typically ends in .als. 
+a file whose name typically ends in .als. This is typically located within
+a Project folder which Live creates for you.
+
+I.e., an invocation could look like: 
+
+```
+./alsd.py -D  /Volumes/Music/Bangin\ Groove\ Project/Bangin\ Groove.als
+```
+
+You may need to ```chmod +x alsd.py``` first or otherwise prefix it with 
+```python``` if it is not executable..
 
 Technical details
 =================
