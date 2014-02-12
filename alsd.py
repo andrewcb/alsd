@@ -30,12 +30,65 @@ class ALSNode(object):
     def __init__(self, elem):
         self.elem = elem
 
+    def valueForSubtag(self, selector):
+        return bind(self.elem.find(selector), lambda e: e.get("Value"))
 
-class LiveSetMidiClipData(object):
+    def valueForSubtagWithType(self, selector, type):
+        try:
+            return type(self.valueForSubtag(selector))
+        except ValueError:
+            return None
+
+    def intValueForSubtag(self, selector):
+        return self.valueForSubtagWithType(selector, int)
+
+    def floatValueForSubtag(self, selector):
+        return self.valueForSubtagWithType(selector, float)
+
+    def boolValueForSubtag(self, selector):
+        return self.valueForSubtag(selector) == 'true'
+
+
+# Clips and their component classes
+
+class ALSWarpMarker(object):
+    def __init__(self, elem):
+        self.secTime = float(elem.get('SecTime'))
+        self.beatTime = float(elem.get('BeatTime'))
+
+class ALSMidiNote(object):
+    def __init__(self, key, elem):
+        # for some reason, Live stores MIDI velocities as floating-point values
+        self.time, self.key, self.duration, self.velocity, self.offVelocity, self.isEnabled = (float(elem.get("Time")), key, float(elem.get("Duration")), float(elem.get("Velocity")), int(elem.get("OffVelocity")), 
+            elem.get("IsEnabled")=="true")
+
+class LiveSetMidiClipData(ALSNode):
     """
     An object encapsulating a MidiClip node.
     """
-    pass
+    def __init__(self, elem):
+        super(LiveSetMidiClipData, self).__init__(elem)
+        self.warpmarkers = [ ALSWarpMarker(e) for e in elem.findall("WarpMarkers/WarpMarker")]
+        self.name = self.valueForSubtag("Name")
+        self.annotation = self.valueForSubtag("Annotation")
+        self.launchMode = self.intValueForSubtag("LaunchMode")
+        self.currentStart = self.floatValueForSubtag("CurrentStart")
+        self.currentEnd = self.floatValueForSubtag("CurrentEnd")
+        self.length = (self.currentStart is not None and self.currentEnd is not None) and self.currentEnd-self.currentStart or None
+        self.loopStart = self.floatValueForSubtag("Loop/LoopStart")
+        self.loopEnd = self.floatValueForSubtag("Loop/LoopEnd")
+        self.loopStartRelative = self.floatValueForSubtag("Loop/StartRelative")
+        self.loopOn = self.boolValueForSubtag("Loop/LoopOn")
+        self.loopLength = (self.loopStart is not None and self.loopEnd is not None) and self.loopEnd-self.loopStart or None
+
+        self.notes = []
+        for ktrk in elem.findall("Notes/KeyTracks/KeyTrack"):
+            note = bind(ktrk.find("MidiKey"), lambda e:int(e.get("Value")))
+            self.notes.extend([ALSMidiNote(note, mne) for mne in ktrk.findall("Notes/MidiNoteEvent")])
+        self.notes.sort(key=lambda mn:mn.time)
+
+
+# Devices 
 
 class LiveSetAuPluginPresetData(object):
     """
@@ -56,12 +109,13 @@ class LiveSetDeviceData(ALSNode):
         self.auPresetBuffer = bind(elem.find("PluginDesc/AuPluginInfo/Preset/AuPreset/Buffer"), lambda e:LiveSetAuPluginPresetData(e.text))
         self.auPresetName = bind(self.auPresetBuffer, lambda b:b.name)
 
-        self.presetName = bind(elem.find("UserName"), lambda e:e.get("Value")) \
+        self.presetName = self.valueForSubtag("UserName") \
                 or bind(elem.find("PluginDesc/AuPluginInfo/Name"), lambda e:': '.join([v for v in [e.get("Value"),self.auPresetName] if v is not None])) \
-                or bind(elem.find("PluginDesc/VstPluginInfo/PlugName"), lambda e:e.get("Value")) \
+                or self.valueForSubtag("PluginDesc/VstPluginInfo/PlugName") \
                 or ""
         self.name = "%s: %s"%(self.deviceType, self.presetName)
 
+# Tracks
 
 class LiveSetTrackData(ALSNode):
     """
@@ -70,11 +124,11 @@ class LiveSetTrackData(ALSNode):
     def __init__(self, elem):
         super(LiveSetTrackData, self).__init__(elem)
         self.trackType = elem.tag
-        self.name = bind(elem.find('Name/EffectiveName'), lambda e:e.get('Value'))
+        self.name = self.valueForSubtag('Name/EffectiveName')
         self.devices = [LiveSetDeviceData(c) for c in elem.find("DeviceChain/DeviceChain/Devices")]
-        self.clipslots = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:x.findall("ClipSlot"))
         # TODO: encapsulate these in a class
-        self.midiclips = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:x.findall(".//MidiClip"))
+        self.clipslots = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:x.findall("ClipSlot"))
+        self.midiclips = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:[LiveSetMidiClipData(c) for c in x.findall(".//MidiClip")])
 
 
 class LiveSetData(object):

@@ -21,9 +21,26 @@ class TestLiveInfo(unittest.TestCase):
 		self.assertEqual(trk.devices[0].presetName, "Massive")
 		self.assertEqual(trk.devices[1].presetName, "Driver")
 
-	def test_010_clip_count(self):
+	def test_010_clips(self):
 		trk = self.testdev1.tracks[0]
 		self.assertEqual(len(trk.midiclips), 2)
+		self.assertEqual([c.name for c in trk.midiclips], ["A clip", "Another clip"])
+		clip0 = trk.midiclips[0]
+		self.assertEqual(clip0.loopLength, 16)
+
+		clip1 = trk.midiclips[1]
+		self.assertEqual(clip1.loopLength, 4)
+
+	def test_011_midinotes(self):
+		trk = self.testdev1.tracks[0]
+		clip0 = trk.midiclips[0]
+		self.assertEqual(len(clip0.notes), 4)
+		self.assertEqual([n.time for n in clip0.notes], [0.0, 1.0, 1.5, 2.0])
+		self.assertEqual([n.key for n in clip0.notes], [60, 65, 57, 62])
+		self.assertEqual([n.duration for n in clip0.notes], [1.0, 0.5, 0.5, 0.25])
+		self.assertEqual([int(n.velocity) for n in clip0.notes], [110, 64, 100, 100])
+		clip1 = trk.midiclips[1]
+		self.assertEqual(len(clip1.notes), 7)
 
 
 
