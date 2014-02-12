@@ -127,8 +127,8 @@ class LiveSetTrackData(ALSNode):
         self.name = self.valueForSubtag('Name/EffectiveName')
         self.devices = [LiveSetDeviceData(c) for c in elem.find("DeviceChain/DeviceChain/Devices")]
         # TODO: encapsulate these in a class
-        self.clipslots = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:x.findall("ClipSlot"))
-        self.midiclips = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:[LiveSetMidiClipData(c) for c in x.findall(".//MidiClip")])
+        self.clipslots = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:x.findall("ClipSlot")) or []
+        self.midiclips = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:[LiveSetMidiClipData(c) for c in x.findall(".//MidiClip")]) or []
 
 
 class LiveSetData(object):
@@ -141,16 +141,18 @@ class LiveSetData(object):
         self.tracks = [LiveSetTrackData(c) for c in self.live_set.find("Tracks")]
 
 
-def dumpinfo(path, track=None, show_devices=True):
+def dumpinfo(path, track=None, show_devices=True, show_clips=False):
     """Print out some info about an Ableton Live set at a path"""
     lsd = LiveSetData(path)
-
 
     def dumptrack(i, t):
         print "%d: %s (%s)"%(i, t.name, t.trackType)
         if show_devices:
             for dev in t.devices:
                 print "  %s"%dev.name
+        if show_clips:
+            for clip in t.midiclips:
+                print """  Clip "%s" (loop length: %f bars)"""%(clip.name, clip.loopLength or 0) #FIXME
     if track is not None:
         try:
             track = int(track)
@@ -171,11 +173,12 @@ if __name__ == "__main__":
 
     globalopts = [
         optparse.make_option("-t", "--track", dest="track", help="The track number to display"),
-        optparse.make_option("-D", "--show-devices", dest="show_devices", action="store_true", default=False, help="List devices for each track")
+        optparse.make_option("-D", "--show-devices", dest="show_devices", action="store_true", default=False, help="List devices for each track"),
+        optparse.make_option("-C", "--show-clips", dest="show_clips", action="store_true", default=False, help="List clips for each track")
     ]
 
     optp = optparse.OptionParser(option_list=globalopts)
     (opts, args) = optp.parse_args(sys.argv[1:])
     for fn in args:
-        dumpinfo(fn, track=opts.track, show_devices=opts.show_devices)
+        dumpinfo(fn, track=opts.track, show_devices=opts.show_devices, show_clips=opts.show_clips)
 

@@ -6,10 +6,11 @@ files on a disk. It is a standalone Python program which reads the file,
 and does not depend on Live. 
 
 Currently alsd is very basic; it can list the tracks in a Live set, and,
-if the -D option is specified, list the devices on each track. For plugin
-devices, it lists the name of the plugin, and for AudioUnit plugins, it 
-can usually list the preset name (if any) in use. 
-Further functionality will be added in the future.
+optionally list the devices or MIDI clips on each track, if the -D or -C 
+options are specified. For plugin devices, it lists the name of the 
+plugin, and for AudioUnit plugins, it can usually list the preset name 
+(if any) in use.  Currently, only the names and durations (in beats) of 
+clips are displayed.  Further functionality will be added in the future.
 
 Usage:
 ======
@@ -41,6 +42,8 @@ developed using Python 2.7.
 An Ableton Live set file is just a .gzipped XML file, and whilst being 
 quite long and detailed, seems not too difficult to understand. 
 
+There are unit tests in the tests subdirectory; to run, use 
+```python test_alsd.py```.
 
 License
 =======
@@ -54,3 +57,6 @@ Andrew Bulhak   http://dev.null.org/acb/  http://github.com/andrewcb/
 Ableton and Live are trademarks of Ableton AG. This code is not in any way
 associated with or endorsed by them, and makes no claim of any official 
 connection with Ableton.
+
+This program is provided without any warranty of any sort; in fact, at the 
+moment, it is pretty much guaranteed to be incomplete.
