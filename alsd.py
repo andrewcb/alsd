@@ -27,8 +27,31 @@ class ALSNode(object):
     """
     The parent class of all .als nodes
     """
+
+    # the value fields we automatically extract from the element; each one 
+    # has a name mapped to a type/conversion function; i.e., "Time" : float .
+
+    valuefields = {}
+
     def __init__(self, elem):
         self.elem = elem
+        # populate instance vars using harvested Value attributes from the element or subelements
+        for (key, fspec) in self.valuefields.iteritems():
+            if type(fspec) == dict:
+                (sel, ivar, vtype ) = (fspec.get('sel',key),fspec.get('ivar',key),fspec.get('type',None))
+            elif type(fspec) == tuple:  # A simple (type, sel) tuple
+                (sel, ivar, vtype) = (fspec[1], key, fspec[0])
+            else:
+                (sel, ivar, vtype) = (key, key[0].lower()+key[1:], fspec)
+            val = self.valueForSubtag(sel)
+            if val:
+                if vtype:
+                    try:
+                        val = vtype(val)
+                    except ValueError:
+                        pass
+            self.__dict__[ivar] = val
+
 
     def valueForSubtag(self, selector):
         return bind(self.elem.find(selector), lambda e: e.get("Value"))
@@ -66,18 +89,15 @@ class LiveSetMidiClipData(ALSNode):
     """
     An object encapsulating a MidiClip node.
     """
+    valuefields = { 
+      'Name': None, 'Annotation': None, 'LaunchMode':int, 'CurrentStart':float, 'CurrentEnd':float,  
+      'loopStart' : (float, "Loop/LoopStart"), 'loopEnd' : (float, "Loop/LoopEnd"), 
+      'loopStartRelative' : (float, "Loop/LoopStartRelative"), 
+    }
     def __init__(self, elem):
         super(LiveSetMidiClipData, self).__init__(elem)
         self.warpmarkers = [ ALSWarpMarker(e) for e in elem.findall("WarpMarkers/WarpMarker")]
-        self.name = self.valueForSubtag("Name")
-        self.annotation = self.valueForSubtag("Annotation")
-        self.launchMode = self.intValueForSubtag("LaunchMode")
-        self.currentStart = self.floatValueForSubtag("CurrentStart")
-        self.currentEnd = self.floatValueForSubtag("CurrentEnd")
         self.length = (self.currentStart is not None and self.currentEnd is not None) and self.currentEnd-self.currentStart or None
-        self.loopStart = self.floatValueForSubtag("Loop/LoopStart")
-        self.loopEnd = self.floatValueForSubtag("Loop/LoopEnd")
-        self.loopStartRelative = self.floatValueForSubtag("Loop/StartRelative")
         self.loopOn = self.boolValueForSubtag("Loop/LoopOn")
         self.loopLength = (self.loopStart is not None and self.loopEnd is not None) and self.loopEnd-self.loopStart or None
 
@@ -121,10 +141,10 @@ class LiveSetTrackData(ALSNode):
     """
     An object encapsulating the data for a Track
     """
+    valuefields = { 'Name' : None }
     def __init__(self, elem):
         super(LiveSetTrackData, self).__init__(elem)
         self.trackType = elem.tag
-        self.name = self.valueForSubtag('Name/EffectiveName')
         self.devices = [LiveSetDeviceData(c) for c in elem.find("DeviceChain/DeviceChain/Devices")]
         # TODO: encapsulate these in a class
         self.clipslots = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:x.findall("ClipSlot")) or []

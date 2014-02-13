@@ -25,7 +25,11 @@ class TestLiveInfo(unittest.TestCase):
 		trk = self.testdev1.tracks[0]
 		self.assertEqual(len(trk.midiclips), 2)
 		self.assertEqual([c.name for c in trk.midiclips], ["A clip", "Another clip"])
+
 		clip0 = trk.midiclips[0]
+		self.assertEqual(clip0.launchMode, 0)
+		self.assertEqual(clip0.currentStart, 0)
+		self.assertEqual(clip0.currentEnd, 16)
 		self.assertEqual(clip0.loopLength, 16)
 
 		clip1 = trk.midiclips[1]
