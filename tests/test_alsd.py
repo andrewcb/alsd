@@ -12,16 +12,20 @@ class TestLiveInfo(unittest.TestCase):
 	def test_000_tracks(self):
 		lsd = self.testdev1
 		self.assertEqual(len(lsd.tracks), 5)
-	def test_001_au_devices(self):
+
+	def test_001_mastertrack(self):
+		self.assertEqual(self.testdev1.mastertrack.mixer.params['Volume'].manual, 1)
+		self.assertEqual(self.testdev1.mastertrack.mixer.params['Tempo'].manual, 120)
+	def test_010_au_devices(self):
 		trk = self.testdev1.tracks[0]
 		self.assertEqual(trk.devices[0].presetName, "FM8: 6ties Mute Bass")
 		self.assertEqual(trk.devices[1].presetName, "Combo: Untitled")
-	def test_002_vst_devices(self):
+	def test_011_vst_devices(self):
 		trk = self.testdev1.tracks[1]
 		self.assertEqual(trk.devices[0].presetName, "Massive")
 		self.assertEqual(trk.devices[1].presetName, "Driver")
 
-	def test_010_clips(self):
+	def test_020_clips(self):
 		trk = self.testdev1.tracks[0]
 		self.assertEqual(len(trk.midiclips), 2)
 		self.assertEqual([c.name for c in trk.midiclips], ["A clip", "Another clip"])
@@ -35,7 +39,7 @@ class TestLiveInfo(unittest.TestCase):
 		clip1 = trk.midiclips[1]
 		self.assertEqual(clip1.loopLength, 4)
 
-	def test_011_midinotes(self):
+	def test_021_midinotes(self):
 		trk = self.testdev1.tracks[0]
 		clip0 = trk.midiclips[0]
 		self.assertEqual(len(clip0.notes), 4)

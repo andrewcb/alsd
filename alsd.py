@@ -23,6 +23,20 @@ def hideUnprintable(str, maskchar='.'):
 
 #  ---- classes
 
+# the boolean value type:
+def BoolValue(str): return  (str == "true")
+
+# return the type function for a string value
+def guessTypeForValue(v):
+    if (v in ('true','false')): return BoolValue
+    for fn in (int, float):
+        try:
+            if fn(v) is not None: 
+                return fn
+        except ValueError:
+            pass
+    return None  # just a string
+
 class ALSNode(object):
     """
     The parent class of all .als nodes
@@ -57,6 +71,7 @@ class ALSNode(object):
         return bind(self.elem.find(selector), lambda e: e.get("Value"))
 
     def valueForSubtagWithType(self, selector, type):
+        if type is None: type = lambda x:x
         try:
             return type(self.valueForSubtag(selector))
         except ValueError:
@@ -71,6 +86,24 @@ class ALSNode(object):
     def boolValueForSubtag(self, selector):
         return self.valueForSubtag(selector) == 'true'
 
+
+# A node representing an automatable parameter
+
+class ALSTrackMixerParam(ALSNode):
+    def __init__(self, elem):
+        super(ALSTrackMixerParam, self).__init__(elem)
+        # determine the element type
+        manual = self.valueForSubtag("Manual")
+        self.type = guessTypeForValue(manual) 
+        typefunc = self.type and self.type or (lambda x:x)
+        self.manual = typefunc(manual)
+        self.events = [ (int(e.get('Time')), typefunc(e.get('Value'))) for e in elem.findall("ArrangerAutomation/Events/*")]
+
+
+class ALSTrackMixer(ALSNode):
+    def __init__(self, elem):
+        super(ALSTrackMixer, self).__init__(elem)
+        self.params = dict([(e.tag, ALSTrackMixerParam(e)) for e in elem.findall("*[ArrangerAutomation]")])
 
 # Clips and their component classes
 
@@ -146,6 +179,9 @@ class LiveSetTrackData(ALSNode):
         super(LiveSetTrackData, self).__init__(elem)
         self.trackType = elem.tag
         self.devices = [LiveSetDeviceData(c) for c in elem.find("DeviceChain/DeviceChain/Devices")]
+
+        self.mixer = bind(elem.find("DeviceChain/Mixer"), ALSTrackMixer)
+
         # TODO: encapsulate these in a class
         self.clipslots = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:x.findall("ClipSlot")) or []
         self.midiclips = bind(elem.find("DeviceChain/MainSequencer/ClipSlotList"), lambda x:[LiveSetMidiClipData(c) for c in x.findall(".//MidiClip")]) or []
@@ -159,14 +195,26 @@ class LiveSetData(object):
         self.etree = ET.parse(gzip.GzipFile(path))
         self.live_set = self.etree.getroot().find("LiveSet")
         self.tracks = [LiveSetTrackData(c) for c in self.live_set.find("Tracks")]
+        self.mastertrack = bind(self.live_set.find("MasterTrack"), LiveSetTrackData)
 
 
-def dumpinfo(path, track=None, show_devices=True, show_clips=False):
+def dumpinfo(path, track=None, show_devices=True, show_clips=False, show_global=True):
     """Print out some info about an Ableton Live set at a path"""
     lsd = LiveSetData(path)
 
+    if show_global:
+        globalitems = lsd.mastertrack.mixer.params.items()
+        globalitems.sort(key=lambda i:i[0])
+        for pk, pv in globalitems:
+            print "%s: "%pk, pv.manual    
+
     def dumptrack(i, t):
-        print "%d: %s (%s)"%(i, t.name, t.trackType)
+        trackdesc = ', '.join([v for v in [ 
+            t.trackType, 
+            bind(t.mixer.params.get('Volume'), lambda v: "Vol %4.2f"%v.manual),
+            bind(t.mixer.params.get('Pan'), lambda v: "Pan %3.2f"%v.manual),
+        ] if v is not None])
+        print "%d: %s (%s)"%(i, t.name or "<untitled>", trackdesc)
         if show_devices:
             for dev in t.devices:
                 print "  %s"%dev.name
@@ -194,11 +242,12 @@ if __name__ == "__main__":
     globalopts = [
         optparse.make_option("-t", "--track", dest="track", help="The track number to display"),
         optparse.make_option("-D", "--show-devices", dest="show_devices", action="store_true", default=False, help="List devices for each track"),
-        optparse.make_option("-C", "--show-clips", dest="show_clips", action="store_true", default=False, help="List clips for each track")
+        optparse.make_option("-C", "--show-clips", dest="show_clips", action="store_true", default=False, help="List clips for each track"),
+        optparse.make_option("-M", "--show-mastertrack", dest="show_global", action="store_true", default=False, help="Display the mastertrack settings")
     ]
 
     optp = optparse.OptionParser(option_list=globalopts)
     (opts, args) = optp.parse_args(sys.argv[1:])
     for fn in args:
-        dumpinfo(fn, track=opts.track, show_devices=opts.show_devices, show_clips=opts.show_clips)
+        dumpinfo(fn, track=opts.track, show_devices=opts.show_devices, show_clips=opts.show_clips, show_global=opts.show_global)
 
