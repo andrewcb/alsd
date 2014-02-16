@@ -50,6 +50,10 @@ class TestLiveInfo(unittest.TestCase):
 		clip1 = trk.midiclips[1]
 		self.assertEqual(len(clip1.notes), 7)
 
+	def test_100_timesigs(self):
+		testtimesig = alsd.LiveSetData("test_timesignatures Project/test_timesignatures.als")
+		self.assertEqual(testtimesig.timeSignatures(), [(0, (4,4)), (4,(1,1)), (8,(6,8)), (14,(7,4)), (21,(1,16))])
+
 
 
 if __name__ == "__main__":

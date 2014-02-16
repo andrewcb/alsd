@@ -21,6 +21,11 @@ def decodeHexString(str):
 def hideUnprintable(str, maskchar='.'):
     return ''.join(map(lambda c:(ord(c)>0x1f and ord(c)<0x7e) and c or maskchar, str))
 
+def decodeTimeSignature(encoded):
+    """Convert an Ableton Live integer-encoded time signature into a 
+       (numerator,denominator) tuple"""
+    return (encoded%99+1, 1<<(encoded/99))
+
 #  ---- classes
 
 # the boolean value type:
@@ -197,6 +202,10 @@ class LiveSetData(object):
         self.tracks = [LiveSetTrackData(c) for c in self.live_set.find("Tracks")]
         self.mastertrack = bind(self.live_set.find("MasterTrack"), LiveSetTrackData)
 
+    def timeSignatures(self):
+        """Return an array of (beat time, (num,denom)) time signatures used in the track."""
+        return [(max(t,0), decodeTimeSignature(enc)) for (t,enc) in self.mastertrack.mixer.params['TimeSignature'].events]
+
 
 def dumpinfo(path, track=None, show_devices=True, show_clips=False, show_global=True):
     """Print out some info about an Ableton Live set at a path"""
@@ -206,7 +215,14 @@ def dumpinfo(path, track=None, show_devices=True, show_clips=False, show_global=
         globalitems = lsd.mastertrack.mixer.params.items()
         globalitems.sort(key=lambda i:i[0])
         for pk, pv in globalitems:
-            print "%s: "%pk, pv.manual    
+            if pk != "TimeSignature":
+                print "%s: "%pk, pv.manual    
+        timesigs =  lsd.timeSignatures()
+        if len(timesigs) == 1:
+            print "Time signature: %d/%d"%timesigs[0][1]
+        else:
+            print "Time signatures: %s"%(", ".join(["%d/%d"%ts for (tm,ts) in timesigs ]))
+
 
     def dumptrack(i, t):
         trackdesc = ', '.join([v for v in [ 
